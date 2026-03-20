@@ -1,3 +1,3 @@
-module gesture-control-gateway
+module gateway
 
 go 1.26.1

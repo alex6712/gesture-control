@@ -35,6 +35,27 @@ htmlcov/
 # Docker
 **/.dockerignore
 
+# Go
+**/bin/
+**/pkg/
+**/vendor/
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+**/.Python
+**/*.egg-info/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.coverage
+**/coverage.xml
+**/*.cover
+**/.hypothesis/
+**/*.egg
+**/*.so
+
 # ML / большие файлы
 **/*.pth
 **/*.pt
