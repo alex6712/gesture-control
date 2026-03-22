@@ -12,10 +12,12 @@ var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Запустить управление с помощью жестов",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if _, err := ffmpeg.Find(); err != nil {
+		found, err := ffmpeg.Find()
+		if err != nil {
 			return err
 		}
 
+		fmt.Printf("FFmpeg найден: %s\n", found.Path)
 		fmt.Println("Утилита запущена...")
 		return nil
 	},
