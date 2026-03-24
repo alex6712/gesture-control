@@ -1,19 +1,15 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	appconfig "cli/internal/config"
 	"cli/internal/ffmpeg"
-	"cli/internal/gateway"
-	"cli/internal/stream"
 	"cli/internal/wizard"
 
 	"github.com/spf13/cobra"
@@ -40,7 +36,7 @@ var startCmd = &cobra.Command{
 			return wrapCLIError(exitConfig, "load config: %v", err)
 		}
 
-		if appconfig.NeedsWizard(cfg) {
+		if !appconfig.IsReady(cfg) {
 			if err = wizard.Run(&cfg); err != nil {
 				return wrapCLIError(exitConfig, "%v", err)
 			}
@@ -63,16 +59,16 @@ var startCmd = &cobra.Command{
 		if err := ensureFFmpeg(&cfg); err != nil {
 			return err
 		}
-		if err := connectGateway(cfg); err != nil {
-			return err
-		}
+		// if err := connectGateway(cfg); err != nil {
+		// 	return err
+		// }
 		if err := os.WriteFile(lockPath, []byte(strconv.Itoa(os.Getpid())), 0o644); err != nil {
 			return wrapCLIError(exitConfig, "write lock file: %v", err)
 		}
 		defer os.Remove(lockPath)
 
 		fmt.Printf("[gesture-control] INFO  Starting video stream @ %s %dfps grayscale=%t\n", cfg.FFmpeg.Resolution, cfg.FFmpeg.FPS, cfg.FFmpeg.Grayscale)
-		fmt.Printf("[gesture-control] INFO  Preview: %s\n", stream.PreviewCommand(cfg.FFmpeg.Path, cfg.FFmpeg.Resolution, cfg.FFmpeg.FPS, cfg.FFmpeg.Grayscale))
+		fmt.Printf("[gesture-control] INFO  Preview:\n")
 		fmt.Println("[gesture-control] INFO  Streaming... Press Ctrl+C to stop")
 
 		sigCh := make(chan os.Signal, 1)
@@ -143,31 +139,31 @@ func ensureFFmpeg(cfg *appconfig.Config) error {
 // connectGateway устанавливает соединение с gateway с повторными попытками.
 // Задержка между попытками растёт линейно: delay_ms * номер_попытки.
 // Различает ECONNREFUSED (gateway недоступен) от остальных ошибок подключения.
-func connectGateway(cfg appconfig.Config) error {
-	var lastErr error
-	for attempt := 1; attempt <= cfg.Stream.ReconnectRetries; attempt++ {
-		fmt.Printf("[gesture-control] INFO  Connecting to gateway... %s\n", cfg.GatewayURL)
+// func connectGateway(cfg appconfig.Config) error {
+// 	var lastErr error
+// 	for attempt := 1; attempt <= cfg.Stream.ReconnectRetries; attempt++ {
+// 		fmt.Printf("[gesture-control] INFO  Connecting to gateway... %s\n", cfg.GatewayURL)
 
-		latency, err := gateway.Handshake(cfg.GatewayURL, cfg.APIKey)
-		if err == nil {
-			fmt.Printf("[gesture-control] INFO  Connected. Session ID: simulated (%s)\n", latency)
-			return nil
-		}
+// 		latency, err := gateway.Handshake(cfg.GatewayURL, cfg.APIKey)
+// 		if err == nil {
+// 			fmt.Printf("[gesture-control] INFO  Connected. Session ID: simulated (%s)\n", latency)
+// 			return nil
+// 		}
 
-		lastErr = err
-		backoff := time.Duration(cfg.Stream.ReconnectDelayMS) * time.Millisecond
+// 		lastErr = err
+// 		backoff := time.Duration(cfg.Stream.ReconnectDelayMS) * time.Millisecond
 
-		fmt.Printf("[gesture-control] WARN  Gateway connect failed (attempt %d/%d): %v\n", attempt, cfg.Stream.ReconnectRetries, err)
+// 		fmt.Printf("[gesture-control] WARN  Gateway connect failed (attempt %d/%d): %v\n", attempt, cfg.Stream.ReconnectRetries, err)
 
-		time.Sleep(backoff)
-	}
+// 		time.Sleep(backoff)
+// 	}
 
-	if errors.Is(lastErr, syscall.ECONNREFUSED) {
-		return wrapCLIError(exitGateway, "gateway недоступен: %v", lastErr)
-	}
+// 	if errors.Is(lastErr, syscall.ECONNREFUSED) {
+// 		return wrapCLIError(exitGateway, "gateway недоступен: %v", lastErr)
+// 	}
 
-	return wrapCLIError(exitGateway, "не удалось подключиться к gateway: %v", lastErr)
-}
+// 	return wrapCLIError(exitGateway, "не удалось подключиться к gateway: %v", lastErr)
+// }
 
 // existingPID читает lock-файл и проверяет, жив ли процесс с указанным PID.
 // Возвращает (pid, true) если процесс существует и отвечает на сигнал 0.

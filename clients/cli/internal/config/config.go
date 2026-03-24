@@ -195,8 +195,8 @@ func Reset() error {
 	return SaveCurrent()
 }
 
-// NeedsWizard возвращает true, если конфиг не содержит API-ключа -
+// IsReady возвращает true, если конфиг не содержит API-ключа -
 // то есть приложение запускается впервые или ключ был сброшен.
-func NeedsWizard(cfg Config) bool {
-	return strings.TrimSpace(cfg.APIKey) == ""
+func IsReady(cfg Config) bool {
+	return strings.TrimSpace(cfg.APIKey) != ""
 }
